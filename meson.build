@@ -110,6 +110,7 @@ endif
 
 if prefers_static_libs
     extra_flags += ['-static-libstdc++', '-static-libgcc']
+    extra_link_flags += ['-static-libstdc++', '-static-libgcc']
     if host_machine.system() != 'darwin'
         extra_link_flags += ['-no-pie']
     endif
@@ -466,8 +467,8 @@ sdl2_net_summary_msg = 'Disabled'
 if get_option('use_sdl2_net')
     sdl2_net_dep = dependency(
         'SDL2_net',
-        version: '>= 2.0.0',
-        static: ('sdl2_net' in static_libs_list),
+        version: '>= 2.2.0',
+        static: ('sdl2_net' in static_libs_list or prefers_static_libs),
         not_found_message: msg.format('use_sdl2_net'),
     )
     sdl2_net_summary_msg = sdl2_net_dep.found()
@@ -814,6 +815,7 @@ third_party_deps = [
     atomic_dep,
     stdcppfs_dep,
     sdl2_dep,
+    sdl2_net_dep,
     sdl2_image_dep,
     threads_dep,
     ghc_dep,
