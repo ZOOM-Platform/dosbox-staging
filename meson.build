@@ -680,7 +680,6 @@ else
         'sdl2',
         version: ['>= 2.0.5', '< 3'],
         static: ('sdl2' in static_libs_list),
-        fallback: [],
         include_type: 'system',
     )
 endif
@@ -935,9 +934,8 @@ if get_option('use_sdl2_net')
     else
         sdl2_net_dep = dependency(
             'SDL2_net',
-            version: ['>= 2.0.0', '< 3'],
-            static: ('sdl2_net' in static_libs_list),
-            fallback: [],
+            version: ['>= 2.2.0', '< 3'],
+            static: ('sdl2_net' in static_libs_list or prefers_static_libs),
             not_found_message: msg.format('use_sdl2_net'),
             include_type: 'system',
         )
@@ -1252,6 +1250,7 @@ third_party_deps = [
     atomic_dep,
     stdcppfs_dep,
     sdl2_dep,
+    sdl2_net_dep,
     threads_dep,
     ghc_dep,
     libiir_dep,
