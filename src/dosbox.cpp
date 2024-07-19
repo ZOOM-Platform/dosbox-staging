@@ -590,6 +590,70 @@ void DOSBOX_Init()
 
 	/* Setup all the different modules making up DOSBox */
 
+	// ZOOM Platform: Load custom radiaki config values
+	secprop = control->AddSection_prop("radiaki", NULL);
+	pbool = secprop->Add_bool("enable_radialki", only_at_start, true);
+	pbool->Set_help("Enable Radialki, the radial weapon wheel.");
+	pbool = secprop->Add_bool("slowdown_on_radialki_open", only_at_start, true);
+	pbool->Set_help("Slow the game down when Radialki is open. Only applies when radialki is opened via gamepad.");
+	pbool = secprop->Add_bool("swap_controller_navigation_buttons", only_at_start, false);
+	pbool->Set_help("Swap confirm and back in menus");
+	pint = secprop->Add_int("radialki_autohide_delay_after_scrolling", only_at_start, 500);
+	pint->Set_help("Delay (in milliseconds) for radialki to be auto-hidden after a scroll. Only applies when radialki is opened via scrolling. (Default: 500)");
+	pbool = secprop->Add_bool("use_radialki_with_scrollwheel", only_at_start, true);
+	pbool->Set_help("Use radialki with mouse scrollwheel.");
+	pstring = secprop->Add_string("pillarbox_art_style", only_at_start, "random");
+	pstring->Set_help("Select which style of pillarbox art to use. [Options: stone, wood, rats, random, none. Default: random]");
+	pint = secprop->Add_int("autosprint_key_scancode_1", only_at_start, 57);
+	pint->Set_help("The first keyboard scancode for autosprint.");
+	pint = secprop->Add_int("autosprint_key_scancode_2", only_at_start, -1);
+	pint->Set_help("The second keyboard scancode for autosprint.");
+	pint = secprop->Add_int("autosprint_key_scancode_3", only_at_start, -1);
+	pint->Set_help("The third keyboard scancode for autosprint.");
+	pint = secprop->Add_int("autosprint_key_scancode_4", only_at_start, -1);
+	pint->Set_help("The fourth keyboard scancode for autosprint.");
+
+	pint = secprop->Add_int("autosprint_joystick_button_1", only_at_start, -1);
+	pint->Set_help("The first joystick button for autosprint.");
+	pint = secprop->Add_int("autosprint_joystick_button_2", only_at_start, -1);
+	pint->Set_help("The second joystick button for autosprint.");
+	pint = secprop->Add_int("autosprint_joystick_button_3", only_at_start, -1);
+	pint->Set_help("The third joystick button for autosprint.");
+	pint = secprop->Add_int("autosprint_joystick_button_4", only_at_start, -1);
+	pint->Set_help("The fourth joystick button for autosprint.");
+
+	pint = secprop->Add_int("autosprint_joystick_button_1_index", only_at_start, -1);
+	pint->Set_help("The joystick index for the first button for autosprint.");
+	pint = secprop->Add_int("autosprint_joystick_button_2_index", only_at_start, -1);
+	pint->Set_help("The joystick index for the second button for autosprint.");
+	pint = secprop->Add_int("autosprint_joystick_button_3_index", only_at_start, -1);
+	pint->Set_help("The joystick index for the third button for autosprint.");
+	pint = secprop->Add_int("autosprint_joystick_button_4_index", only_at_start, -1);
+	pint->Set_help("The joystick index for the fourth button for autosprint.");
+
+	pint = secprop->Add_int("radialki_joystick_button_1", only_at_start, -1);
+	pint->Set_help("The first joystick button for opening radialki.");
+	pint = secprop->Add_int("radialki_joystick_button_2", only_at_start, -1);
+	pint->Set_help("The second joystick button for opening radialki.");
+	pint = secprop->Add_int("radialki_joystick_button_3", only_at_start, -1);
+	pint->Set_help("The third joystick button for opening radialki.");
+	pint = secprop->Add_int("radialki_joystick_button_4", only_at_start, -1);
+	pint->Set_help("The fourth joystick button for opening radialki.");
+
+	pint = secprop->Add_int("radialki_joystick_button_1_index", only_at_start, -1);
+	pint->Set_help("The joystick index for the first button for opening radialki.");
+	pint = secprop->Add_int("radialki_joystick_button_2_index", only_at_start, -1);
+	pint->Set_help("The joystick index for the second button for opening radialki.");
+	pint = secprop->Add_int("radialki_joystick_button_3_index", only_at_start, -1);
+	pint->Set_help("The joystick index for the third button for opening radialki.");
+	pint = secprop->Add_int("radialki_joystick_button_4_index", only_at_start, -1);
+	pint->Set_help("The joystick index for the fourth button for opening radialki.");
+
+	pint = secprop->Add_int("sprint_key_scancode", only_at_start, 225);
+	pint->Set_help("The keyboard scancode for sprint.");
+	pbool = secprop->Add_bool("show_crosshair", only_at_start, false);
+	pbool->Set_help("Show a crosshair while in game.");
+
 	secprop = control->AddSection_prop("dosbox", &DOSBOX_RealInit);
 	pstring = secprop->Add_string("language", always, "");
 	pstring->Set_help(

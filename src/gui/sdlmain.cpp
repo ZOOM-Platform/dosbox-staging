@@ -75,6 +75,7 @@
 #include "tracy.h"
 #include "vga.h"
 #include "video.h"
+#include "gui_imgui.h"
 
 static void switch_console_to_utf8()
 {
@@ -2745,6 +2746,8 @@ static bool present_frame_gl()
 			}
 		}
 
+		RenderImGui(); // Render ImGui context
+
 		SDL_GL_SwapWindow(sdl.window);
 	}
 	render_pacer->Checkpoint();
@@ -3838,7 +3841,19 @@ bool GFX_Events()
 		MAPPER_UpdateJoysticks();
 	}
 #endif
+
 	while (SDL_PollEvent(&event)) {
+
+		// Select weapon when LClick is pressed
+		if (ImGuiIsRadialkiiScrollSelectionEnabled())
+		{
+			if (ImGuiIsInGame() && !ImGuiIsPaused() && event.button.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT && event.button.y != -1)
+			{
+				ImGuiHideRadialki();
+			}
+		}
+
+		ProcessImGuiEvents(event); // Process events in ImGui
 #if C_DEBUG
 		if (is_debugger_event(event)) {
 			pdc_event_queue.push(event);
@@ -4181,6 +4196,9 @@ bool GFX_Events()
 		default: MAPPER_CheckEvent(&event);
 		}
 	}
+
+	CreateImGuiFrame(sdl.renderer); // Create ImGui window
+
 	return !shutdown_requested;
 }
 
@@ -5062,6 +5080,9 @@ int sdl_main(int argc, char* argv[])
 		if (arguments->startmapper) {
 			MAPPER_DisplayUI();
 		}
+
+		// Initialize ImGui
+		InitImGui(sdl.window, sdl.opengl.context);
 
 		// Run the machine until shutdown
 		control->StartUp();

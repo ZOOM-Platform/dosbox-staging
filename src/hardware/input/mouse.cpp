@@ -34,6 +34,7 @@
 #include "math_utils.h"
 #include "pic.h"
 #include "video.h"
+#include "../../gui/gui_imgui.h"
 
 CHECK_NARROWING();
 
@@ -692,6 +693,23 @@ void MOUSE_EventWheel(const int16_t w_rel)
 	// Drop unneeded events
 	if (should_drop_press_or_wheel()) {
 		return;
+	}
+
+	// ZOOM Platform: Select weapon with scroll wheel
+	if (ImGuiIsRadialkiiScrollSelectionEnabled())
+	{
+		if (ImGuiIsInGame() && !ImGuiIsPaused())
+		{
+			ImGuiShowRadialki();
+			if (w_rel > 0)
+			{
+				ImGuiSelectNextWeapon();
+			}
+			else
+			{
+				ImGuiSelectPreviousWeapon();
+			}
+		}
 	}
 
 	// Notify mouse interfaces

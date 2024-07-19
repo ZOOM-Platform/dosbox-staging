@@ -47,6 +47,7 @@
 #include "string_utils.h"
 #include "timer.h"
 #include "video.h"
+#include "gui_imgui.h"
 
 //  Status Colors
 //  ~~~~~~~~~~~~~
@@ -445,7 +446,65 @@ public:
 		return CreateKeyBind(event->key.keysym.scancode);
 	}
 
-	bool CheckEvent(SDL_Event * event) override {
+	bool pressedUp = false;
+	bool pressedDown = false;
+	bool pressedEnter = false;
+	bool pressedAutosprint = false;
+
+	bool CheckEvent(SDL_Event * event) override
+	{
+		// ZOOM Platform: Check for arrow, Enter and autosprint keys
+		const Uint8 * keystates = SDL_GetKeyboardState(NULL);
+		bool currentUpState = keystates[SDL_SCANCODE_UP];
+		bool currentDownState = keystates[SDL_SCANCODE_DOWN];
+		bool currentEnterState = (keystates[SDL_SCANCODE_RETURN] || keystates[SDL_SCANCODE_KP_ENTER]);
+
+		bool currentAutosprintState = keystates[ImGuiGetAutosprintScancode(1)] ||
+			keystates[ImGuiGetAutosprintScancode(2)] ||
+			keystates[ImGuiGetAutosprintScancode(3)] ||
+			keystates[ImGuiGetAutosprintScancode(4)];
+
+		if (currentAutosprintState) {
+			if (!pressedAutosprint) {
+				if (ImGuiIsInGame()) {
+					ImGuiToggleAutosprint();
+
+				}
+				pressedAutosprint = true;
+			}
+		} else {
+			pressedAutosprint = false;
+		}
+
+		if (currentEnterState) {
+			if (!pressedEnter) {
+				if (ImGuiIsInLoadSaveMenu()) {
+					ImGuiConfirm();
+				}
+				pressedEnter = true;
+			}
+		} else {
+			pressedEnter = false;
+		}
+
+		if (currentUpState) {
+			if (!pressedUp) {
+				ImGuiMoveArrowUp();
+				pressedUp = true;
+			}
+		} else {
+			pressedUp = false;
+		}
+
+		if (currentDownState) {
+			if (!pressedDown) {
+				ImGuiMoveArrowDown();
+				pressedDown = true;
+			}
+		} else {
+			pressedDown = false;
+		}
+
 		if (event->type!=SDL_KEYDOWN && event->type!=SDL_KEYUP) return false;
 		uintptr_t key = static_cast<uintptr_t>(event->key.keysym.scancode);
 		if (event->type==SDL_KEYDOWN) ActivateBindList(&lists[key],0x7fff,true);
@@ -612,13 +671,20 @@ static void set_joystick_led([[maybe_unused]] SDL_Joystick *joystick,
 
 class CStickBindGroup : public CBindGroup {
 public:
-	CStickBindGroup(int _stick_index, uint8_t _emustick, bool _dummy = false)
-	        : CBindGroup(),
-	          stick_index(_stick_index), // the number of the device in the system
-	          emustick(_emustick), // the number of the emulated device
-	          is_dummy(_dummy)
+	CStickBindGroup(int _stick_index, uint8_t _emustick,
+		bool _dummy = false, uint8_t _real_stick_index = NULL)
+		: CBindGroup(),
+		stick_index(_stick_index), // the number of the device in the system
+		emustick(_emustick), // the number of the emulated device
+		is_dummy(_dummy)
 	{
-		sprintf(configname, "stick_%u", static_cast<unsigned>(emustick));
+
+		if (_real_stick_index) {
+			sprintf(configname, "stick_%u", static_cast<unsigned>(_real_stick_index)); // evil hack. DO NOT USE THIS. I'M SERIOUS.
+		} else {
+			sprintf(configname, "stick_%u", static_cast<unsigned>(_emustick));
+		}
+		
 		if (is_dummy)
 			return;
 
@@ -649,6 +715,8 @@ public:
 		sdl_joystick = SDL_JoystickOpen(stick_index);
 		stick_id = SDL_JoystickInstanceID(sdl_joystick);
 
+		sdl_controller = SDL_GameControllerOpen(stick_index); // ZOOM Platform: Open controller
+
 		set_joystick_led(sdl_joystick, on_color);
 		if (sdl_joystick==nullptr) {
 			button_wrap=emulated_buttons;
@@ -676,8 +744,8 @@ public:
 		if (button_wrap > MAXBUTTON)
 			button_wrap = MAXBUTTON;
 
-		LOG_MSG("MAPPER: Initialised %s with %d axes, %d buttons, and %d hat(s)",
-		        SDL_JoystickNameForIndex(stick_index), axes, buttons, hats);
+		LOG_MSG("MAPPER: Initialised (%d) %s with %d axes, %d buttons, and %d hat(s)",
+			stick_index, SDL_JoystickNameForIndex(stick_index), axes, buttons, hats);
 
 		// Trigger buttons that are actually analogue axis need special handling
 		// This function detects such triggers and sets the is_trigger variable for them
@@ -689,6 +757,9 @@ public:
 		set_joystick_led(sdl_joystick, off_color);
 		SDL_JoystickClose(sdl_joystick);
 		sdl_joystick = nullptr;
+
+		SDL_GameControllerClose(sdl_controller);  // ZOOM Platform: Close controller
+		sdl_controller = nullptr;
 
 		delete[] pos_axis_lists;
 		pos_axis_lists = nullptr;
@@ -812,9 +883,160 @@ public:
 		JOYSTICK_Move_Y(emustick, virtual_joysticks[emustick].axis_pos[1]);
 	}
 
+	int radialkiButton1PressedFrames = -1;
+	int radialkiButton2PressedFrames = -1;
+	int radialkiButton3PressedFrames = -1;
+	int radialkiButton4PressedFrames = -1;
+	bool pressedDpadDown = false;
+	bool pressedDpadUp = false;
+	bool pressedA = false;
+	bool pressedB = false;
+	bool pressedLeftStickUp = false;
+	bool pressedLeftStickDown = false;
+	bool pressedAutosprint = false;
+
 	void ActivateJoystickBoundEvents() {
 		if (sdl_joystick == nullptr) {
 			return;
+		}
+
+		bool radialkiButtonsPressed = false;
+		bool autosprintButtonPressed = false;
+
+		// ZOOM Platform: Check for DPAD, A and B keys. Also check for radialki and autosprint keys
+		for (int joystickIndex = 0; joystickIndex < SDL_NumJoysticks(); joystickIndex++) {
+			for (int button = 1; button <= 4; button++) {
+				if (SDL_JoystickOpen(joystickIndex) == sdl_joystick) {
+
+					// Only check remapped buttons for this joystick
+					if (ImGuiGetRadialkiJoystick(button) == joystickIndex) {
+
+						// Check if radialki button was pressed
+						bool buttonPressedOnThisJoystick = SDL_JoystickGetButton(sdl_joystick, ImGuiGetRadialkiButton(button));
+						int *radialkiButtonPressedFrames;
+
+						// Get the frame count for the current button
+						switch (button) {
+							case 1:
+								radialkiButtonPressedFrames = &radialkiButton1PressedFrames;
+							case 2:
+								radialkiButtonPressedFrames = &radialkiButton2PressedFrames;
+							case 3:
+								radialkiButtonPressedFrames = &radialkiButton3PressedFrames;
+							case 4:
+								radialkiButtonPressedFrames = &radialkiButton4PressedFrames;
+						}
+
+						// Take action based on framecount for this button
+						if (buttonPressedOnThisJoystick) {
+							if ((*radialkiButtonPressedFrames)++ == 10) {
+								ImGuiShowRadialki(sdl_controller);
+							}
+						} else {
+							if (*radialkiButtonPressedFrames >= 0) {
+								ImGuiHideRadialki();
+							}
+							*radialkiButtonPressedFrames = -1;
+						}
+
+						radialkiButtonsPressed = radialkiButtonsPressed || buttonPressedOnThisJoystick;
+					}
+
+					if (ImGuiGetAutosprintJoystick(button) == joystickIndex) {
+						autosprintButtonPressed = autosprintButtonPressed || SDL_JoystickGetButton(sdl_joystick, ImGuiGetAutosprintButton(button));
+					}
+				}
+			}
+		}
+
+		SDL_GameControllerButton buttonConfirm = SDL_CONTROLLER_BUTTON_A;
+		SDL_GameControllerButton buttonCancel = SDL_CONTROLLER_BUTTON_B;
+		if (ImGuiControllerButtonsAreSwapped()) {
+			buttonConfirm = SDL_CONTROLLER_BUTTON_B;
+			buttonCancel = SDL_CONTROLLER_BUTTON_A;
+		}
+
+		bool currentDpadDownState = SDL_GameControllerGetButton(sdl_controller,
+			SDL_CONTROLLER_BUTTON_DPAD_DOWN);
+		bool currentDpadUpState = SDL_GameControllerGetButton(
+			sdl_controller, SDL_CONTROLLER_BUTTON_DPAD_UP);
+		bool currentAState = SDL_GameControllerGetButton(
+			sdl_controller, buttonConfirm);
+		bool currentBState = SDL_GameControllerGetButton(
+			sdl_controller, buttonCancel);
+		Sint32 currentRightAxis = SDL_GameControllerGetAxis(sdl_controller, SDL_CONTROLLER_AXIS_RIGHTX);
+		Sint32 currentLeftAxis = SDL_GameControllerGetAxis(sdl_controller, SDL_CONTROLLER_AXIS_LEFTY);
+
+		if (autosprintButtonPressed) {
+			if (!pressedAutosprint) {
+				if (ImGuiIsInGame()) {
+					ImGuiToggleAutosprint();
+				}
+				pressedAutosprint = true;
+			}
+		} else {
+			pressedAutosprint = false;
+		}
+
+		if (currentDpadDownState) {
+			if (!pressedDpadDown) {
+				ImGuiMoveArrowDown();
+				pressedDpadDown = true;
+			}
+		} else {
+			pressedDpadDown = false;
+		}
+
+		if (currentDpadUpState) {
+			if (!pressedDpadUp) {
+				ImGuiMoveArrowUp();
+				pressedDpadUp = true;
+			}
+		} else {
+			pressedDpadUp = false;
+		}
+
+		if (currentAState) {
+			if (!pressedA) {
+				ImGuiConfirm();
+				pressedA = true;
+			}
+		} else {
+			pressedA = false;
+		}
+
+		if (currentBState) {
+			if (!pressedB) {
+				ImGuiCancel();
+				pressedB = true;
+			}
+		} else {
+			pressedB = false;
+		}
+
+		if (currentLeftAxis > SDL_JOYSTICK_AXIS_MAX / 3) {
+			if (!pressedLeftStickDown) {
+				ImGuiMoveArrowDown();
+				pressedLeftStickDown = true;
+			}
+		}
+		else {
+			pressedLeftStickDown = false;
+		}
+
+		if (currentLeftAxis < SDL_JOYSTICK_AXIS_MIN / 3) {
+			if (!pressedLeftStickUp) {
+				ImGuiMoveArrowUp();
+				pressedLeftStickUp = true;
+			}
+		}
+		else {
+			pressedLeftStickUp = false;
+		}
+
+		if (currentRightAxis < SDL_JOYSTICK_AXIS_MIN / 3 || currentRightAxis > SDL_JOYSTICK_AXIS_MAX / 3)
+		{
+			ImGuiSendMouseMovement(currentRightAxis / 10);
 		}
 
 		bool button_pressed[MAXBUTTON];
@@ -1005,6 +1227,7 @@ protected:
 	// Index of the joystick in the system
 	int stick_index{-1};
 	uint8_t emustick;
+	SDL_GameController * sdl_controller = nullptr; // ZOOM Platform: Create an SDL controller variable
 	SDL_Joystick *sdl_joystick = nullptr;
 	char configname[10];
 	unsigned button_autofire[MAXBUTTON] = {};
@@ -2931,10 +3154,10 @@ static void QueryJoysticks()
 	// Everything below here involves auto-configuring
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	const int req_min_axis = std::min(num_joysticks, 2);
+	const int req_min_axis = std::min(num_joysticks, 16);
 
 	// Check which, if any, of the first two joysticks are useable
-	bool useable[2] = {false, false};
+	bool useable[16] = {false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
 	for (int i = 0; i < req_min_axis; ++i) {
 		SDL_Joystick *stick = SDL_JoystickOpen(i);
 		set_joystick_led(stick, marginal_color);
@@ -3028,8 +3251,10 @@ static void CreateBindGroups() {
 			        new CStickBindGroup(joyno, joyno);
 			if ((joyno + 1U) < mapper.sticks.num) {
 				delete mapper.sticks.stick[mapper.sticks.num_groups];
-				mapper.sticks.stick[mapper.sticks.num_groups++] =
-				        new CStickBindGroup(joyno + 1U, joyno + 1U);
+				for (int i = 0; i < mapper.sticks.num; i++) {
+					mapper.sticks.stick[mapper.sticks.num_groups++] =
+						new CStickBindGroup(i + 1U, joyno + 1U, false, i + 1U);
+				}
 			} else {
 				stickbindgroups.push_back(
 				        new CStickBindGroup(joyno + 1U, joyno + 1U, true));

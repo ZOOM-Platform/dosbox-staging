@@ -5,6 +5,7 @@ libgui_sources = files(
     'sdlmain.cpp',
     'shader_manager.cpp',
     'titlebar.cpp',
+    'gui_imgui.cpp'
 )
 
 libgui = static_library(
@@ -18,6 +19,7 @@ libgui = static_library(
         opengl_dep,
         sdl2_dep,
         tracy_dep,
+        imgui_dep,
     ],
     cpp_args: warnings,
 )

@@ -85,3 +85,6 @@ tools/unlock_the_magic_mpeg_ps.exe
 obj-*.-linux-gnu
 debian
 
+build-zoom.sh
+/build_zoom.sh
+/dosbox-staging-linux-x86_64-v0.81.0-alpha-3593-gc27f212b3

@@ -240,6 +240,7 @@ endif
 
 if prefers_static_libs
     extra_flags += ['-static-libstdc++', '-static-libgcc']
+    extra_link_flags += ['-static-libstdc++', '-static-libgcc']
     if host_machine.system() != 'darwin'
         extra_link_flags += ['-no-pie']
     endif
@@ -719,6 +720,13 @@ sdl2_dep = dependency(
         'use_power=disabled',
     ],
     include_type: 'system',
+)
+
+imgui_dep = dependency(
+    'imgui',
+    version: ['>= 1.91'],
+    static: ('imgui' in static_libs_list or prefers_static_libs),
+    include_type: 'preserve',
 )
 
 # zlib
@@ -1288,6 +1296,7 @@ third_party_deps = [
     tracy_dep,
     libwhereami_dep,
     libtalchorus_dep,
+    imgui_dep,
 ]
 
 if conf_data.get('C_MANYMOUSE') != 0

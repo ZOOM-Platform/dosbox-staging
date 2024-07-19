@@ -868,6 +868,9 @@
     <ClCompile Include="..\src\misc\ethernet.cpp">
       <Filter>src\misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\gui\gui_imgui.cpp">
+      <Filter>src\gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\ansi_code_markup.h">
@@ -1712,6 +1715,13 @@
     <ClInclude Include="..\include\ethernet.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\gui\gui_imgui.h">
+      <Filter>src\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\resource.h" />
+    <ClInclude Include="..\src\gui\gui_imgui_res.h">
+      <Filter>src\gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\winres.rc">
@@ -1722,6 +1732,7 @@
     <Image Include="..\src\dosbox.ico">
       <Filter>resources</Filter>
     </Image>
+    <Image Include="..\contrib\icons\windows\dosbox-staging.ico" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="include">
