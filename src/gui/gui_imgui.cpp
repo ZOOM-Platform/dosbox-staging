@@ -1315,7 +1315,6 @@ void ImGuiSendMouseMovement(Sint32 movement)
 
 // Wrapper function for adding images, handling dpi properly
 void ImGuiAddImage(ImDrawList * drawlist, ImTextureID user_texture_id, ImVec2 p_min, ImVec2 p_max) {
-	printf("BEFORE p_min.x: %f, p_min.y %f, p_max.x: %f, p_max.y: %f\n", p_min.x, p_min.y, p_max.x, p_max.y);
 	p_min.x = dpiScaling * p_min.x;
 	p_min.y = dpiScaling * p_min.y;
 	p_max.x = dpiScaling * p_max.x;
